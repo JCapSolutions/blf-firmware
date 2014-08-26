@@ -56,7 +56,7 @@
 /*
  * global variables
  */
-PROGMEM  uint8_t modes[] = { MODES };
+PROGMEM  const uint8_t modes[] = { MODES };
 volatile uint8_t mode_idx = 0;
 volatile uint8_t press_duration = 0;
 volatile uint8_t low_to_high = 0;
