@@ -74,8 +74,8 @@
 //#define MODE_TURBO			255	// Can comment out to remove mode
 #define TURBO_TIMEOUT		180 // How many WTD ticks before before dropping down (.5 sec each)
 
-#define ADC_LOW				130	// When do we start ramping
-#define ADC_CRIT			120 // When do we shut the light off
+#define ADC_LOW				128	// When do we start ramping
+#define ADC_CRIT			118 // When do we shut the light off
 
 #define CAP_THRESHOLD		130  // Value between 1 and 255 corresponding with cap voltage (0 - 1.1v) where we consider it a short press to move to the next mode
 								 // Not sure the lowest you can go before getting bad readings, but with a value of 70 and a 1uF cap, it seemed to switch sometimes
@@ -109,8 +109,6 @@
 #define ADC_CHANNEL 0x01	// MUX 01 corresponds with PB2
 #define ADC_DIDR 	ADC1D	// Digital input disable bit corresponding with PB2
 #define ADC_PRSCL   0x06	// clk/64
-#define ADC_LOW     130
-#define ADC_CRIT	120
 
 #define PWM_LVL		OCR0B	// OCR0B is the output compare register for PB1
 
