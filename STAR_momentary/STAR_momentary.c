@@ -30,7 +30,7 @@
 #include <avr/sleep.h>
 //#include <avr/power.h>
 
-#define STAR2_PIN   PB0
+#define STAR2_PIN   PB0		// If not connected, will cycle L-H.  Connected, H-L
 #define STAR3_PIN   PB4
 #define SWITCH_PIN  PB3		// what pin the switch is connected to, which is Star 4
 #define PWM_PIN     PB1
@@ -59,6 +59,7 @@
 PROGMEM  uint8_t modes[] = { MODES };
 volatile uint8_t mode_idx = 0;
 volatile uint8_t press_duration = 0;
+volatile uint8_t low_to_high = 0;
 
 // Debounced switch press value
 int is_pressed()
@@ -169,8 +170,12 @@ ISR(WDT_vect) {
 		}
 		
 		if (press_duration == LONG_PRESS_DUR) {
-			// Long press, go to previous mode
-			prev_mode();
+			// Long press
+			if (low_to_high) {
+				prev_mode();
+			} else {
+				next_mode();
+			}			
 		}
 		// Just always reset turbo timer whenever the button is pressed
 		turbo_ticks = 0;
@@ -179,8 +184,12 @@ ISR(WDT_vect) {
 	} else {
 		// Not pressed
 		if (press_duration > 0 && press_duration < LONG_PRESS_DUR) {
-			// Short press, go to next mode
-			next_mode();
+			// Short press
+			if (low_to_high) {
+				next_mode();
+			} else {
+				prev_mode();
+			}	
 		} else {
 			// Only do turbo check when switch isn't pressed
 		#ifdef TURBO
@@ -249,6 +258,14 @@ int main(void)
 	ADC_off();
 	#endif
 	ACSR   |=  (1<<7); //AC off
+	
+	// Determine if we are going L-H, or H-L based on STAR 2
+	if ((PINB & (1 << STAR2_PIN)) == 0) {
+		// High to Low
+		low_to_high = 0;
+	} else {
+		low_to_high = 1;
+	}
 	
 	// Enable sleep mode set to Power Down that will be triggered by the sleep_mode() command.
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
