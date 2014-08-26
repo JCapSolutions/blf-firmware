@@ -51,6 +51,7 @@
  *
  *		To find out what value to use, plug in the target voltage (V) to this equation
  *			value = (V * 4700 * 255) / (23800 * 1.1)
+ *      
  */
 #define F_CPU 4800000UL
 
@@ -61,13 +62,13 @@
 
 #define VOLTAGE_MON			// Comment out to disable
 
-#define MODE_MOON			13	// Can comment out to remove mode, but should be set through soldering stars
-#define MODE_LOW			25  // Can comment out to remove mode
-#define MODE_MED			80	// Can comment out to remove mode
-#define MODE_HIGH_W_TURBO	200	// MODE_HIGH value when turbo is enabled
-#define MODE_HIGH			255	// Can comment out to remove mode
+#define MODE_MOON			8	// Can comment out to remove mode, but should be set through soldering stars
+#define MODE_LOW			14  // Can comment out to remove mode
+#define MODE_MED			39	// Can comment out to remove mode
+#define MODE_HIGH_W_TURBO	110	// MODE_HIGH value when turbo is enabled
+#define MODE_HIGH			120	// Can comment out to remove mode
 #define MODE_TURBO			255	// Can comment out to remove mode
-#define TURBO_TIMEOUT		180 // How many WTD ticks before before dropping down (.5 sec each)
+#define TURBO_TIMEOUT		240 // How many WTD ticks before before dropping down (.5 sec each)
 
 #define WDT_TIMEOUT			2	// Number of WTD ticks before mode is saved (.5 sec each)
 
@@ -100,8 +101,6 @@
 #define ADC_CHANNEL 0x01	// MUX 01 corresponds with PB2
 #define ADC_DIDR 	ADC1D	// Digital input disable bit corresponding with PB2
 #define ADC_PRSCL   0x06	// clk/64
-#define ADC_LOW     130
-#define ADC_CRIT	120
 
 #define PWM_LVL		OCR0B	// OCR0B is the output compare register for PB1
 
@@ -115,7 +114,7 @@ uint8_t eep[32];
 uint8_t memory = 0;
 
 // Modes (gets set when the light starts up based on stars)
-uint8_t modes[10];  // Don't need 10, but keeping it high enough to handle all
+static uint8_t modes[10];  // Don't need 10, but keeping it high enough to handle all
 volatile uint8_t mode_idx = 0;
 int     mode_dir = 0; // 1 or -1. Determined when checking stars. Do we increase or decrease the idx when moving up to a higher mode.
 uint8_t mode_cnt = 0;
@@ -149,38 +148,6 @@ inline void next_mode() {
 			mode_idx = 0;
 		}
 	}
-}
-
-inline void check_stars() {
-	// Load up the modes based on stars
-	// Always load up the modes array in order of lowest to highest mode
-	// 0 being low for soldered, 1 for pulled-up for not soldered
-	// Moon
-#ifdef MODE_MOON
-	if ((PINB & (1 << STAR2_PIN)) == 0) {
-		modes[mode_cnt++] = MODE_MOON;
-	}
-#endif
-#ifdef MODE_LOW
-	modes[mode_cnt++] = MODE_LOW;
-#endif
-#ifdef MODE_MED
-	modes[mode_cnt++] = MODE_MED;
-#endif
-#ifdef MODE_HIGH
-	modes[mode_cnt++] = MODE_HIGH;
-#endif
-#ifdef MODE_TURBO
-	modes[mode_cnt++] = MODE_TURBO;
-#endif
-	if ((PINB & (1 << STAR3_PIN)) == 0) {
-		// High to Low
-		mode_dir = -1;
-	} else {
-		mode_dir = 1;
-	}
-	// Not soldered (1) should enable memory
-	memory = ((PINB & (1 << STAR4_PIN)) > 0) ? 1 : 0;
 }
 
 inline void WDT_on() {
@@ -262,7 +229,6 @@ int main(void)
     DDRB = (1 << PWM_PIN);
 
     // Set timer to do PWM for correct output pin and set prescaler timing
-	// TODO - possibly look into changing to Fast PWM - http://budgetlightforum.com/node/21465#comment-447441
     TCCR0A = 0x23; // phase corrected PWM is 0x21 for PB1, fast-PWM is 0x23
     TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
 	
@@ -274,7 +240,35 @@ int main(void)
 	#endif
 	ACSR   |=  (1<<7); //AC off
 	
-	check_stars();
+	// Load up the modes based on stars
+	// Always load up the modes array in order of lowest to highest mode
+	// 0 being low for soldered, 1 for pulled-up for not soldered
+	// Moon
+	#ifdef MODE_MOON
+	if ((PINB & (1 << STAR2_PIN)) == 0) {
+		modes[mode_cnt++] = MODE_MOON;
+	}
+	#endif
+	#ifdef MODE_LOW
+	modes[mode_cnt++] = MODE_LOW;
+	#endif
+	#ifdef MODE_MED
+	modes[mode_cnt++] = MODE_MED;
+	#endif
+	#ifdef MODE_HIGH
+	modes[mode_cnt++] = MODE_HIGH;
+	#endif
+	#ifdef MODE_TURBO
+	modes[mode_cnt++] = MODE_TURBO;
+	#endif
+	if ((PINB & (1 << STAR3_PIN)) == 0) {
+		// High to Low
+		mode_dir = -1;
+	} else {
+		mode_dir = 1;
+	}
+	// Not soldered (1) should enable memory
+	memory = ((PINB & (1 << STAR4_PIN)) > 0) ? 1 : 0;
 	
 	// Enable sleep mode set to Idle that will be triggered by the sleep_mode() command.
 	// Will allow us to go idle between WDT interrupts
@@ -293,8 +287,6 @@ int main(void)
 	}
 	// Store mode with short press indicator
 	store_mode_idx(mode_idx|0x10);
-	
-	uint8_t prev_mode_idx = mode_idx;
 	
 	WDT_on();
 	
