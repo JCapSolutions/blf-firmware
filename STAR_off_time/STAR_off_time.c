@@ -67,7 +67,7 @@
 // Levels should start around 10 with Fast PWM
 
 #define MODE_MOON			13	// Can comment out to remove mode, but should be set through soldering stars
-#define MODE_LOW			22  // Can comment out to remove mode
+#define MODE_LOW			20  // Can comment out to remove mode
 #define MODE_MED			83	// Can comment out to remove mode
 #define MODE_HIGH_W_TURBO	180	// MODE_HIGH value when turbo is enabled
 #define MODE_HIGH			255	// Can comment out to remove mode
@@ -284,7 +284,8 @@ int main(void)
 		// Didn't have a short press, keep the same mode
 	#ifndef MEMORY
 		// Reset to the first mode
-		store_mode_idx((mode_dir == 1) ? 0 : (mode_cnt - 1));
+		mode_idx = ((mode_dir == 1) ? 0 : (mode_cnt - 1));
+		store_mode_idx(mode_idx);
 	#endif
 	}
 	// Turn off ADC
