@@ -1,4 +1,18 @@
+/*
+ * NANJG 105C Diagram
+ *           ---
+ *         -|   |- VCC
+ *  Star 4 -|   |- Voltage ADC
+ *  Star 3 -|   |- PWM
+ *     GND -|   |- Star 2
+ *           ---
+ */
+
 #define F_CPU 4800000UL
+
+// PWM Mode
+#define PHASE 0b00000001
+#define FAST  0b00000011
 
 /*
  * =========================================================================
@@ -6,7 +20,9 @@
  */
 
 #define VOLTAGE_MON			// Comment out to disable - ramp down and eventual shutoff when battery is low
-#define MODES			0,16,32,125,255	// Must be low to high, and must start with 0
+#define MODES			0,8,32,125,255		// Must be low to high, and must start with 0
+#define ALT_MODES		0,2,32,125,255		// Must be low to high, and must start with 0, the defines the level for the secondary output. Comment out if no secondary output
+#define MODE_PWM		0,PHASE,FAST,FAST,FAST		// Define one per mode above, 0 for phase-correct, 1 for fast-PWM
 #define TURBO				// Comment out to disable - full output with a step down after n number of seconds
 							// If turbo is enabled, it will be where 255 is listed in the modes above
 #define TURBO_TIMEOUT	5625 // How many WTD ticks before before dropping down (.016 sec each)
@@ -30,16 +46,17 @@
 #include <avr/sleep.h>
 //#include <avr/power.h>
 
-#define STAR2_PIN   PB0		// If not connected, will cycle L-H.  Connected, H-L
-#define STAR3_PIN   PB4
+#define STAR3_PIN   PB4     // If not connected, will cycle L-H.  Connected, H-L
 #define SWITCH_PIN  PB3		// what pin the switch is connected to, which is Star 4
 #define PWM_PIN     PB1
+#define ALT_PWM_PIN PB0
 #define VOLTAGE_PIN PB2
 #define ADC_CHANNEL 0x01	// MUX 01 corresponds with PB2
 #define ADC_DIDR 	ADC1D	// Digital input disable bit corresponding with PB2
 #define ADC_PRSCL   0x06	// clk/64
 
-#define PWM_LVL OCR0B       // OCR0B is the output compare register for PB1
+#define PWM_LVL     OCR0B   // OCR0B is the output compare register for PB1
+#define ALT_PWM_LVL OCR0A   // OCR0A is the output compare register for PB0
 
 #define DB_REL_DUR 0b00001111 // time before we consider the switch released after
 							  // each bit of 1 from the right equals 16ms, so 0x0f = 64ms
@@ -56,7 +73,11 @@
 /*
  * global variables
  */
-PROGMEM  const uint8_t modes[] = { MODES };
+const uint8_t modes[]     = { MODES    };
+#ifdef ALT_MODES
+const uint8_t alt_modes[] = { ALT_MODES };
+#endif
+const uint8_t mode_pwm[] = { MODE_PWM };
 volatile uint8_t mode_idx = 0;
 volatile uint8_t press_duration = 0;
 volatile uint8_t low_to_high = 0;
@@ -193,7 +214,7 @@ ISR(WDT_vect) {
 		} else {
 			// Only do turbo check when switch isn't pressed
 		#ifdef TURBO
-			if (pgm_read_byte(&modes[mode_idx]) == 255) {
+			if (modes[mode_idx] == 255) {
 				turbo_ticks++;
 				if (turbo_ticks > TURBO_TIMEOUT) {
 					// Go to the previous mode
@@ -239,16 +260,20 @@ int main(void)
 {	
 	// Set all ports to input, and turn pull-up resistors on for the inputs we are using
 	DDRB = 0x00;
-	PORTB = (1 << SWITCH_PIN) | (1 << STAR2_PIN) | (1 << STAR3_PIN);
+	PORTB = (1 << SWITCH_PIN) | (1 << STAR3_PIN);
 
 	// Set the switch as an interrupt for when we turn pin change interrupts on
 	PCMSK = (1 << SWITCH_PIN);
 	
     // Set PWM pin to output
-    DDRB = (1 << PWM_PIN);
+	#ifdef ALT_MODES
+    DDRB = (1 << PWM_PIN) | (1 << ALT_PWM_PIN);
+	#else
+	DDRB = (1 << PWM_PIN);
+	#endif
 
     // Set timer to do PWM for correct output pin and set prescaler timing
-    TCCR0A = 0x23; // phase corrected PWM is 0x21 for PB1, fast-PWM is 0x23
+    //TCCR0A = 0x23; // phase corrected PWM is 0x21 for PB1, fast-PWM is 0x23
     TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
 	
 	// Turn features on or off as needed
@@ -259,8 +284,8 @@ int main(void)
 	#endif
 	ACSR   |=  (1<<7); //AC off
 	
-	// Determine if we are going L-H, or H-L based on STAR 2
-	if ((PINB & (1 << STAR2_PIN)) == 0) {
+	// Determine if we are going L-H, or H-L based on Star 3
+	if ((PINB & (1 << STAR3_PIN)) == 0) {
 		// High to Low
 		low_to_high = 0;
 	} else {
@@ -278,10 +303,28 @@ int main(void)
 		// will change the mode if needed.  If this loop detects that the mode has changed, run the
 		// logic for that mode while continuing to check for a mode change.
 		if (mode_idx != last_mode_idx) {
-			last_mode_idx = mode_idx;
 			// The WDT changed the mode.
-			PWM_LVL = pgm_read_byte(&modes[mode_idx]);
-			if (PWM_LVL == 0) {
+			if (mode_idx > 0) {
+				// No need to change the mode if we are just turning the light off
+				// Check if the PWM mode is different
+				if (mode_pwm[last_mode_idx] != mode_pwm[mode_idx]) {
+					#ifdef ALT_MODES
+					TCCR0A = mode_pwm[mode_idx] | 0b10100000;  // Use both outputs
+					#else
+					TCCR0A = mode_pwm[mode_idx] | 0b00100000;  // Only use the normal output
+					#endif
+				}
+			}
+			PWM_LVL     = modes[mode_idx];
+			#ifdef ALT_MODES
+			ALT_PWM_LVL = alt_modes[mode_idx];
+			#endif
+			last_mode_idx = mode_idx;
+			#ifdef ALT_MODES
+			if (modes[mode_idx] == 0 && alt_modes[mode_idx] == 0) {
+			#else
+			if (modes[mode_idx] == 0) {
+			#endif
 				_delay_ms(1); // Need this here, maybe instructions for PWM output not getting executed before shutdown?
 				// Go to sleep
 				sleep_until_switch_press();

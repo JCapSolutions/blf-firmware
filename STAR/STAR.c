@@ -62,13 +62,16 @@
 
 #define VOLTAGE_MON			// Comment out to disable
 
-#define MODE_MOON			8	// Can comment out to remove mode, but should be set through soldering stars
+#define MODE_MOON			3	// Can comment out to remove mode, but should be set through soldering stars
 #define MODE_LOW			14  // Can comment out to remove mode
 #define MODE_MED			39	// Can comment out to remove mode
 #define MODE_HIGH_W_TURBO	110	// MODE_HIGH value when turbo is enabled
 #define MODE_HIGH			120	// Can comment out to remove mode
 #define MODE_TURBO			255	// Can comment out to remove mode
 #define TURBO_TIMEOUT		240 // How many WTD ticks before before dropping down (.5 sec each)
+
+#define FAST_PWM_START	    8 // Above what output level should we switch from phase correct to fast-PWM?
+#define DUAL_PWM_START		8 // Above what output level should we switch from the alternate PWM output to both PWM outputs?  Comment out to disable alternate PWM output
 
 #define WDT_TIMEOUT			2	// Number of WTD ticks before mode is saved (.5 sec each)
 
@@ -103,6 +106,7 @@
 #define ADC_PRSCL   0x06	// clk/64
 
 #define PWM_LVL		OCR0B	// OCR0B is the output compare register for PB1
+#define ALT_PWM_LVL OCR0A   // OCR0A is the output compare register for PB0
 
 /*
  * global variables
@@ -179,6 +183,21 @@ inline void ADC_off() {
 	ADCSRA &= ~(1<<7); //ADC off
 }
 
+void set_output(uint8_t pwm_lvl) {
+	#ifdef DUAL_PWM_START
+	if (pwm_lvl > DUAL_PWM_START) {
+		// Using the normal output along with the alternate
+		PWM_LVL = pwm_lvl;
+	} else {
+		PWM_LVL = 0;
+	}
+	// Use the alternate mode no matter what level we are at
+	ALT_PWM_LVL = pwm_lvl;
+	#else
+	PWM_LVL = pwm_lvl;
+	#endif
+}
+
 #ifdef VOLTAGE_MON
 uint8_t low_voltage(uint8_t voltage_val) {
 	// Start conversion
@@ -214,7 +233,7 @@ ISR(WDT_vect) {
 	//} else if (ticks == TURBO_TIMEOUT && modes[mode_idx] == MODE_TURBO) { // Doesn't make any sense why this doesn't work
 	} else if (ticks == TURBO_TIMEOUT && mode_idx == (mode_cnt - 1)) {
 		// Turbo mode is always at end
-		PWM_LVL = modes[--mode_idx];
+		set_output(modes[--mode_idx]);
 #endif
 	}
 
@@ -223,14 +242,17 @@ ISR(WDT_vect) {
 int main(void)
 {	
 	// All ports default to input, but turn pull-up resistors on for the stars (not the ADC input!  Made that mistake already)
+	#ifdef DUAL_PWM_START
+	PORTB = (1 << STAR3_PIN) | (1 << STAR4_PIN);
+	#else
 	PORTB = (1 << STAR2_PIN) | (1 << STAR3_PIN) | (1 << STAR4_PIN);
+	#endif
 	
     // Set PWM pin to output
     DDRB = (1 << PWM_PIN);
-
-    // Set timer to do PWM for correct output pin and set prescaler timing
-    TCCR0A = 0x23; // phase corrected PWM is 0x21 for PB1, fast-PWM is 0x23
-    TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
+	#ifdef DUAL_PWM_START
+	DDRB = (1 << STAR2_PIN);
+	#endif
 	
 	// Turn features on or off as needed
 	#ifdef VOLTAGE_MON
@@ -245,9 +267,13 @@ int main(void)
 	// 0 being low for soldered, 1 for pulled-up for not soldered
 	// Moon
 	#ifdef MODE_MOON
+	#ifndef DUAL_PWM_START
 	if ((PINB & (1 << STAR2_PIN)) == 0) {
+	#endif
 		modes[mode_cnt++] = MODE_MOON;
+	#ifndef DUAL_PWM_START
 	}
+	#endif
 	#endif
 	#ifdef MODE_LOW
 	modes[mode_cnt++] = MODE_LOW;
@@ -291,7 +317,24 @@ int main(void)
 	WDT_on();
 	
 	// Now just fire up the mode
-	PWM_LVL = modes[mode_idx];
+
+    // Set timer to do PWM for correct output pin and set prescaler timing
+	if (modes[mode_idx] > FAST_PWM_START) {
+		#ifdef DUAL_PWM_START
+		TCCR0A = 0b10100011; // fast-PWM both outputs
+		#else
+		TCCR0A = 0b00100011; // fast-PWM normal output
+		#endif
+	} else {
+		#ifdef DUAL_PWM_START
+		TCCR0A = 0b10100001; // phase corrected PWM both outputs
+		#else
+		TCCR0A = 0x00100001; // phase corrected PWM normal output
+		#endif
+	}
+	TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
+	
+	set_output(modes[mode_idx]);
 	
 	uint8_t i = 0;
 	uint8_t hold_pwm;
@@ -305,13 +348,13 @@ int main(void)
 				while (!low_voltage(ADC_CRIT));
 				i = 0;
 				while (i++<10) {
-					PWM_LVL = 0;
+					set_output(0);
 					_delay_ms(250);
-					PWM_LVL = modes[0];
+					set_output(modes[0]);
 					_delay_ms(500);
 				}
 				// Turn off the light
-				PWM_LVL = 0;
+				set_output(0);
 				// Disable WDT so it doesn't wake us up
 				WDT_off();
 				// Power down as many components as possible
@@ -322,20 +365,28 @@ int main(void)
 				hold_pwm = PWM_LVL;
 				i = 0;
 				while (i++<3) {
-					PWM_LVL = 0;
+					set_output(0);
 					_delay_ms(250);
-					PWM_LVL = hold_pwm;
+					set_output(hold_pwm);
 					_delay_ms(500);
 				}
 				// Lower the mode by half, but don't go below lowest level
 				if ((PWM_LVL >> 1) < modes[0]) {
-					PWM_LVL = modes[0];
+					set_output(modes[0]);
 					mode_idx = 0;
-				} else {					
-					PWM_LVL = (PWM_LVL >> 1);
+				} else {
+					#ifdef DUAL_PWM_START
+					set_output(ALT_PWM_LVL >> 1);
+					#else
+					set_output(PWM_LVL >> 1);
+					#endif
 				}					
 				// See if we should change the current mode level if we've gone under the current mode.
+				#ifdef DUAL_PWM_START
+				if (ALT_PWM_LVL < modes[mode_idx]) {
+				#else
 				if (PWM_LVL < modes[mode_idx]) {
+				#endif
 					// Lower our recorded mode
 					mode_idx--;
 				}
