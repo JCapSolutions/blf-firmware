@@ -71,7 +71,7 @@
 #define TURBO_TIMEOUT		240 // How many WTD ticks before before dropping down (.5 sec each)
 
 #define FAST_PWM_START	    8 // Above what output level should we switch from phase correct to fast-PWM?
-//#define DUAL_PWM_START		8 // Above what output level should we switch from the alternate PWM output to both PWM outputs?  Comment out to disable alternate PWM output
+#define DUAL_PWM_START		8 // Above what output level should we switch from the alternate PWM output to both PWM outputs?  Comment out to disable alternate PWM output
 
 #define WDT_TIMEOUT			2	// Number of WTD ticks before mode is saved (.5 sec each)
 
@@ -301,7 +301,7 @@ int main(void)
 	
 	// Enable sleep mode set to Idle that will be triggered by the sleep_mode() command.
 	// Will allow us to go idle between WDT interrupts
-	//set_sleep_mode(SLEEP_MODE_IDLE); Commenting out to save space
+	set_sleep_mode(SLEEP_MODE_IDLE);
 	
 	// Determine what mode we should fire up
 	// Read the last mode that was saved
@@ -390,7 +390,7 @@ int main(void)
 			_delay_ms(3000);
 		}
 	#endif
-		//sleep_mode(); Commenting out to save space
+		sleep_mode();
 	}
 
     return 0; // Standard Return Code
