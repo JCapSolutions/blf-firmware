@@ -22,7 +22,7 @@
  *		High: 0xff
  *
  * STARS
- *		Star 2 = Moon if connected
+ *		Star 2 = Moon if connected and alternate PWM output not used
  *		Star 3 = H-L if connected, L-H if not
  *		Star 4 = Memory if not connected
  *
@@ -66,12 +66,12 @@
 #define MODE_LOW			14  // Can comment out to remove mode
 #define MODE_MED			39	// Can comment out to remove mode
 #define MODE_HIGH_W_TURBO	110	// MODE_HIGH value when turbo is enabled
-#define MODE_HIGH			120	// Can comment out to remove mode
+#define MODE_HIGH			255	// Can comment out to remove mode
 #define MODE_TURBO			255	// Can comment out to remove mode
 #define TURBO_TIMEOUT		240 // How many WTD ticks before before dropping down (.5 sec each)
 
 #define FAST_PWM_START	    8 // Above what output level should we switch from phase correct to fast-PWM?
-#define DUAL_PWM_START		8 // Above what output level should we switch from the alternate PWM output to both PWM outputs?  Comment out to disable alternate PWM output
+//#define DUAL_PWM_START		8 // Above what output level should we switch from the alternate PWM output to both PWM outputs?  Comment out to disable alternate PWM output
 
 #define WDT_TIMEOUT			2	// Number of WTD ticks before mode is saved (.5 sec each)
 
@@ -191,11 +191,13 @@ void set_output(uint8_t pwm_lvl) {
 	} else {
 		PWM_LVL = 0;
 	}
-	// Use the alternate mode no matter what level we are at
-	ALT_PWM_LVL = pwm_lvl;
 	#else
 	PWM_LVL = pwm_lvl;
 	#endif
+	// Always set alternate PWM value even if not compiled for dual output as we will use this value
+	// throughout the code when trying to see what the current output level is.  Setting this wont affect
+	// the output when alternate output is disabled.
+	ALT_PWM_LVL = pwm_lvl;
 }
 
 #ifdef VOLTAGE_MON
@@ -249,9 +251,10 @@ int main(void)
 	#endif
 	
     // Set PWM pin to output
-    DDRB = (1 << PWM_PIN);
 	#ifdef DUAL_PWM_START
-	DDRB = (1 << STAR2_PIN);
+    DDRB = (1 << PWM_PIN) | (1 << STAR2_PIN);
+	#else
+	DDRB = (1 << PWM_PIN);
 	#endif
 	
 	// Turn features on or off as needed
@@ -298,7 +301,7 @@ int main(void)
 	
 	// Enable sleep mode set to Idle that will be triggered by the sleep_mode() command.
 	// Will allow us to go idle between WDT interrupts
-	set_sleep_mode(SLEEP_MODE_IDLE);
+	//set_sleep_mode(SLEEP_MODE_IDLE); Commenting out to save space
 	
 	// Determine what mode we should fire up
 	// Read the last mode that was saved
@@ -342,7 +345,7 @@ int main(void)
 	#ifdef VOLTAGE_MON
 		if (low_voltage(ADC_LOW)) {
 			// We need to go to a lower level
-			if (mode_idx == 0 && PWM_LVL <= modes[mode_idx]) {
+			if (mode_idx == 0 && ALT_PWM_LVL <= modes[mode_idx]) {
 				// Can't go any lower than the lowest mode
 				// Wait until we hit the critical level before flashing 10 times and turning off
 				while (!low_voltage(ADC_CRIT));
@@ -362,7 +365,7 @@ int main(void)
 				sleep_mode();
 			} else {
 				// Flash 3 times before lowering
-				hold_pwm = PWM_LVL;
+				hold_pwm = ALT_PWM_LVL;
 				i = 0;
 				while (i++<3) {
 					set_output(0);
@@ -371,22 +374,14 @@ int main(void)
 					_delay_ms(500);
 				}
 				// Lower the mode by half, but don't go below lowest level
-				if ((PWM_LVL >> 1) < modes[0]) {
+				if ((ALT_PWM_LVL >> 1) < modes[0]) {
 					set_output(modes[0]);
 					mode_idx = 0;
 				} else {
-					#ifdef DUAL_PWM_START
 					set_output(ALT_PWM_LVL >> 1);
-					#else
-					set_output(PWM_LVL >> 1);
-					#endif
 				}					
 				// See if we should change the current mode level if we've gone under the current mode.
-				#ifdef DUAL_PWM_START
 				if (ALT_PWM_LVL < modes[mode_idx]) {
-				#else
-				if (PWM_LVL < modes[mode_idx]) {
-				#endif
 					// Lower our recorded mode
 					mode_idx--;
 				}
@@ -395,7 +390,7 @@ int main(void)
 			_delay_ms(3000);
 		}
 	#endif
-		sleep_mode();
+		//sleep_mode(); Commenting out to save space
 	}
 
     return 0; // Standard Return Code
