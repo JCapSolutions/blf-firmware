@@ -325,7 +325,7 @@ int main(void)
     // Set PWM pin to output
     DDRB |= (1 << PWM_PIN);
 	#ifdef DUAL_PWM_START
-	DDRB = (1 << STAR2_PIN);
+	DDRB |= (1 << STAR2_PIN);
 	#endif
 
     // Set timer to do PWM for correct output pin and set prescaler timing
@@ -360,7 +360,7 @@ int main(void)
 		#ifdef DUAL_PWM_START
 		TCCR0A = 0b10100001; // phase corrected PWM both outputs
 		#else
-		TCCR0A = 0x00100001; // phase corrected PWM normal output
+		TCCR0A = 0b00100001; // phase corrected PWM normal output
 		#endif
 	}
 	TCCR0B = 0x01; // pre-scaler for timer (1 => 1, 2 => 8, 3 => 64...)
