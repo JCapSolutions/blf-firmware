@@ -1,3 +1,14 @@
+/* STAR_momentary 1.4
+ *
+ * Changelog
+ *
+ * 1.0 Initial version
+ * 1.1 Added ability for star 2 to change mode order
+ * 1.2 Fix for newer version of AVR Studio
+ * 1.3 Added support for dual PWM outputs and selection of PWM mode per output level
+ * 1.4 Added ability to switch to a momentary mode
+ */
+
 /*
  * NANJG 105C Diagram
  *           ---
@@ -33,6 +44,11 @@
 #define ADC_CRIT		120 // When do we shut the light off
 #define ADC_DELAY		188	// Delay in ticks between low-bat rampdowns (188 ~= 3s)
 
+#define MOM_ENTER_DUR   128 // .16ms each.  Comment out to disable this feature
+#define MOM_EXIT_DUR    128 // .16ms each
+
+#define MOM_MODE_IDX    4   // The index of the mode to use in MODES above, starting at index of 0
+
 /*
  * =========================================================================
  */
@@ -63,7 +79,7 @@
 
 // Switch handling
 #define LONG_PRESS_DUR   32 // How many WDT ticks until we consider a press a long press
-                            // 32 is roughly .5 s	
+                            // 32 is roughly .5 s
 
 /*
  * The actual program
@@ -81,6 +97,7 @@ const uint8_t mode_pwm[] = { MODE_PWM };
 volatile uint8_t mode_idx = 0;
 volatile uint8_t press_duration = 0;
 volatile uint8_t low_to_high = 0;
+volatile uint8_t in_momentary = 0;
 
 // Debounced switch press value
 int is_pressed()
@@ -190,6 +207,19 @@ ISR(WDT_vect) {
 			press_duration++;
 		}
 		
+		#ifdef MOM_ENTER_DUR
+		if (in_momentary) {
+			// Turn on full output
+			mode_idx = MOM_MODE_IDX;
+			if (press_duration == MOM_EXIT_DUR) {
+				// Turn light off and disable momentary
+				mode_idx = 0;
+				in_momentary = 0;
+			}
+			return;
+		}
+		#endif	
+
 		if (press_duration == LONG_PRESS_DUR) {
 			// Long press
 			if (low_to_high) {
@@ -198,11 +228,27 @@ ISR(WDT_vect) {
 				next_mode();
 			}			
 		}
+		#ifdef MOM_ENTER_DUR
+		if (press_duration == MOM_ENTER_DUR) {
+			in_momentary = 1;
+			press_duration = 0;
+		}
+		#endif
 		// Just always reset turbo timer whenever the button is pressed
 		turbo_ticks = 0;
 		// Same with the ramp down delay
 		adc_ticks = ADC_DELAY;
+	
 	} else {
+		
+		#ifdef MOM_ENTER_DUR
+		if (in_momentary) {
+			// Turn off the light
+			mode_idx = 0;
+			return;
+		}
+		#endif
+		
 		// Not pressed
 		if (press_duration > 0 && press_duration < LONG_PRESS_DUR) {
 			// Short press
