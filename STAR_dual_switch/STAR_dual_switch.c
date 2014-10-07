@@ -1,3 +1,11 @@
+/* STAR_dual_switch version 1.0
+ *
+ * Changelog
+ *
+ * 1.0 Initial version
+ *
+ */
+
 /*
  * NANJG 105C Diagram
  *           ---
@@ -6,20 +14,13 @@
  *  Star 3 -|   |- PWM
  *     GND -|   |- Star 2
  *           ---
- 
- * CPU speed is 4.8Mhz without the 8x divider when low fuse is 0x75
- *
- * define F_CPU 4800000  CPU: 4.8MHz  PWM: 9.4kHz       ####### use low fuse: 0x75  #######
- *                             /8     PWM: 1.176kHz     ####### use low fuse: 0x65  #######
- * define F_CPU 9600000  CPU: 9.6MHz  PWM: 19kHz        ####### use low fuse: 0x7a  #######
- *                             /8     PWM: 2.4kHz       ####### use low fuse: 0x6a  #######
- * 
- * Above PWM speeds are for phase-correct PWM.  This program uses Fast-PWM, which when the CPU is 4.8MHz will be 18.75 kHz
  *
  * FUSES
  *		I use these fuse settings
- *		Low:  0x75
+ *		Low:  0x75	(4.8MHz CPU without 8x divider, 9.4kHz phase-correct PWM or 18.75kHz fast-PWM)
  *		High: 0xff
+ *
+ *      For more details on these settings, visit http://github.com/JCapSolutions/blf-firmware/wiki/PWM-Frequency
  *
  * STARS
  *		Star 2 = H-L if connected, L-H if not
@@ -51,9 +52,7 @@
  *
  *		To find out what value to use, plug in the target voltage (V) to this equation
  *			value = (V * 4700 * 255) / (23800 * 1.1)
- *
- *
- *  v1.0 - Initial try, there's bound to be bugs     
+ *      
  */
 #define F_CPU 4800000UL
 

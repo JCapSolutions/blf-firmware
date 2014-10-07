@@ -1,4 +1,4 @@
-/* STAR_momentary 1.4
+/* STAR_momentary version 1.4
  *
  * Changelog
  *
@@ -7,6 +7,7 @@
  * 1.2 Fix for newer version of AVR Studio
  * 1.3 Added support for dual PWM outputs and selection of PWM mode per output level
  * 1.4 Added ability to switch to a momentary mode
+ *
  */
 
 /*
@@ -17,8 +18,46 @@
  *  Star 3 -|   |- PWM
  *     GND -|   |- Star 2
  *           ---
+ *
+ * FUSES
+ *		I use these fuse settings
+ *		Low:  0x75	(4.8MHz CPU without 8x divider, 9.4kHz phase-correct PWM or 18.75kHz fast-PWM)
+ *		High: 0xff
+ *
+ *      For more details on these settings, visit http://github.com/JCapSolutions/blf-firmware/wiki/PWM-Frequency
+ *
+ * STARS
+ *		Star 2 = Not used
+ *		Star 3 = H-L if connected, L-H if not
+ *		Star 4 = Switch input
+ *
+ * VOLTAGE
+ *		Resistor values for voltage divider (reference BLF-VLD README for more info)
+ *		Reference voltage can be anywhere from 1.0 to 1.2, so this cannot be all that accurate
+ *
+ *           VCC
+ *            |
+ *           Vd (~.25 v drop from protection diode)
+ *            |
+ *          1912 (R1 19,100 ohms)
+ *            |
+ *            |---- PB2 from MCU
+ *            |
+ *          4701 (R2 4,700 ohms)
+ *            |
+ *           GND
+ *
+ *		ADC = ((V_bat - V_diode) * R2   * 255) / ((R1    + R2  ) * V_ref)
+ *		125 = ((3.0   - .25    ) * 4700 * 255) / ((19100 + 4700) * 1.1  )
+ *		121 = ((2.9   - .25    ) * 4700 * 255) / ((19100 + 4700) * 1.1  )
+ *
+ *		Well 125 and 121 were too close, so it shut off right after lowering to low mode, so I went with
+ *		130 and 120
+ *
+ *		To find out what value to use, plug in the target voltage (V) to this equation
+ *			value = (V * 4700 * 255) / (23800 * 1.1)
+ *      
  */
-
 #define F_CPU 4800000UL
 
 // PWM Mode
