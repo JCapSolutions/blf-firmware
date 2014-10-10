@@ -1,4 +1,4 @@
-/* STAR_momentary version 1.4
+/* STAR_momentary version 1.5
  *
  * Changelog
  *
@@ -7,6 +7,7 @@
  * 1.2 Fix for newer version of AVR Studio
  * 1.3 Added support for dual PWM outputs and selection of PWM mode per output level
  * 1.4 Added ability to switch to a momentary mode
+ * 1.5 Added ability to set mode to 0 but not have it turn off
  *
  */
 
