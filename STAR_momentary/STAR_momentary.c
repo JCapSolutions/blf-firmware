@@ -70,9 +70,9 @@
  */
 
 #define VOLTAGE_MON			// Comment out to disable - ramp down and eventual shutoff when battery is low
-#define MODES			0,8,32,125,255		// Must be low to high, and must start with 0
+#define MODES			0,0,32,125,255		// Must be low to high, and must start with 0
 #define ALT_MODES		0,2,32,125,255		// Must be low to high, and must start with 0, the defines the level for the secondary output. Comment out if no secondary output
-#define MODE_PWM		0,PHASE,FAST,FAST,FAST		// Define one per mode above, 0 for phase-correct, 1 for fast-PWM
+#define MODE_PWM		0,PHASE,FAST,FAST,FAST		// Define one per mode above. 0 tells the light to go to sleep
 #define TURBO				// Comment out to disable - full output with a step down after n number of seconds
 							// If turbo is enabled, it will be where 255 is listed in the modes above
 #define TURBO_TIMEOUT	5625 // How many WTD ticks before before dropping down (.016 sec each)
@@ -405,11 +405,7 @@ int main(void)
 			ALT_PWM_LVL = alt_modes[mode_idx];
 			#endif
 			last_mode_idx = mode_idx;
-			#ifdef ALT_MODES
-			if (modes[mode_idx] == 0 && alt_modes[mode_idx] == 0) {
-			#else
-			if (modes[mode_idx] == 0) {
-			#endif
+			if (mode_pwm[mode_idx] == 0) {
 				_delay_ms(1); // Need this here, maybe instructions for PWM output not getting executed before shutdown?
 				// Go to sleep
 				sleep_until_switch_press();
