@@ -115,7 +115,8 @@
 #define PWM_LVL     OCR0B   // OCR0B is the output compare register for PB1
 #define ALT_PWM_LVL OCR0A   // OCR0A is the output compare register for PB0
 
-
+//#define DEBOUNCE_BOTH          // Comment out if you don't want to debounce the PRESS along with the RELEASE
+                               // PRESS debounce is only needed in special cases where the switch can experience errant signals
 #define DB_PRES_DUR 0b00000001 // time before we consider the switch pressed (after first realizing it was pressed)
 #define DB_REL_DUR  0b00001111 // time before we consider the switch released
 							   // each bit of 1 from the right equals 16ms, so 0x0f = 64ms
@@ -142,7 +143,8 @@ volatile uint8_t press_duration = 0;
 volatile uint8_t low_to_high = 0;
 volatile uint8_t in_momentary = 0;
 
-// Debounced switch press value
+// Debounce switch press value
+#ifdef DEBOUNCE_BOTH
 int is_pressed()
 {
 	static uint8_t pressed = 0;
@@ -161,6 +163,17 @@ int is_pressed()
 
 	return pressed;
 }
+#else
+int is_pressed()
+{
+	// Keep track of last switch values polled
+	static uint8_t buffer = 0x00;
+	// Shift over and tack on the latest value, 0 being low for pressed, 1 for pulled-up for released
+	buffer = (buffer << 1) | ((PINB & (1 << SWITCH_PIN)) == 0);
+	
+	return (buffer & DB_REL_DUR);
+}
+#endif
 
 inline void next_mode() {
 	if (++mode_idx >= sizeof(modes)) {
