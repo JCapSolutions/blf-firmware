@@ -114,8 +114,10 @@
 #define PWM_LVL     OCR0B   // OCR0B is the output compare register for PB1
 #define ALT_PWM_LVL OCR0A   // OCR0A is the output compare register for PB0
 
-#define DB_REL_DUR 0b00001111 // time before we consider the switch released after
-							  // each bit of 1 from the right equals 16ms, so 0x0f = 64ms
+
+#define DB_PRES_DUR 0b00000001 // time before we consider the switch pressed (after first realizing it was pressed)
+#define DB_REL_DUR  0b00001111 // time before we consider the switch released
+							   // each bit of 1 from the right equals 16ms, so 0x0f = 64ms
 
 // Switch handling
 #define LONG_PRESS_DUR   32 // How many WDT ticks until we consider a press a long press
@@ -142,11 +144,21 @@ volatile uint8_t in_momentary = 0;
 // Debounced switch press value
 int is_pressed()
 {
+	static uint8_t pressed = 0;
 	// Keep track of last switch values polled
 	static uint8_t buffer = 0x00;
 	// Shift over and tack on the latest value, 0 being low for pressed, 1 for pulled-up for released
 	buffer = (buffer << 1) | ((PINB & (1 << SWITCH_PIN)) == 0);
-	return (buffer & DB_REL_DUR);
+	
+	if (pressed) {
+		// Need to look for a release indicator by seeing if the last switch status has been 0 for n number of polls
+		pressed = (buffer & DB_REL_DUR);
+	} else {
+		// Need to look for pressed indicator by seeing if the last switch status was 1 for n number of polls
+		pressed = ((buffer & DB_PRES_DUR) == DB_PRES_DUR);
+	}
+
+	return pressed;
 }
 
 inline void next_mode() {
