@@ -297,7 +297,8 @@ ISR(WDT_vect) {
 				prev_mode();
 			#else
 				next_mode();
-			#endif		
+			#endif
+			highest_mode_idx = mode_idx;
 		}
 		#ifdef MOM_ENTER_DUR
 		if (press_duration == MOM_ENTER_DUR) {
@@ -329,6 +330,7 @@ ISR(WDT_vect) {
 			#else
 				prev_mode();
 			#endif
+			highest_mode_idx = mode_idx;
 		} else {
 			// Only do turbo check when switch isn't pressed
 		#ifdef TURBO
