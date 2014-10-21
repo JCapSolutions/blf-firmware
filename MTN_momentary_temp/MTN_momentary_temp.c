@@ -81,7 +81,8 @@
 #define TEMP_HIGH       120 // When we should lower the output
 #define TEMP_LOW        100 // When we should raise the output
 #define BATT_ADC_DELAY	188	// Delay in ticks between low-bat rampdowns (188 ~= 3s)
-#define TEMP_ADC_DELAY	60	// Delay in ticks between temp rampdown/up (188 ~= 3s)
+#define TEMP_ADC_DELAY	188	// Delay in ticks before checking temp (188 ~= 3s)
+#define TEMP_ADC_DELAY_AFTER_RAMP 500 // Delay in ticks before checking temp again after a ramp
 
 #define MOM_ENTER_DUR   128 // .16ms each.  Comment out to disable this feature
 #define MOM_EXIT_DUR    128 // .16ms each
@@ -266,8 +267,8 @@ ISR(WDT_vect) {
 
 	//static uint8_t  press_duration = 0;  // Pressed or not pressed
 	static uint16_t turbo_ticks = 0;
-	static uint8_t  batt_adc_ticks = BATT_ADC_DELAY;
-	static uint8_t  temp_adc_ticks = TEMP_ADC_DELAY;
+	static uint16_t batt_adc_ticks = BATT_ADC_DELAY;
+	static uint16_t temp_adc_ticks = TEMP_ADC_DELAY;
 	static uint8_t  lowbatt_cnt = 0;
 	static uint8_t  high_temp_cnt = 0;
 	static uint8_t  low_temp_cnt = 0;
@@ -396,12 +397,13 @@ ISR(WDT_vect) {
 						low_temp_cnt = 0;
 						// If we reach 0 here, main loop will go into sleep mode
 						// Restart the counter to when we step down again
-						temp_adc_ticks = TEMP_ADC_DELAY;
+						temp_adc_ticks = TEMP_ADC_DELAY_AFTER_RAMP;
 					} else if (low_temp_cnt >= 4) {
 						// TODO - step up half
 						next_mode();
 						high_temp_cnt = 0;
 						low_temp_cnt = 0;
+						// TODO - TEMP_ADC_DELAY_AFTER_RAMP?? Might jump up and cause it to overheat waiting too long
 						temp_adc_ticks = TEMP_ADC_DELAY;
 					}
 				}
