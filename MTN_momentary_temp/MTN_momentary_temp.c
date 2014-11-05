@@ -82,10 +82,10 @@
 #define TEMP_LOW        100 // When we should raise the output
 #define BATT_ADC_DELAY	188	// Delay in ticks between low-bat rampdowns (188 ~= 3s)
 #define TEMP_ADC_DELAY	188	// Delay in ticks before checking temp (188 ~= 3s)
-#define TEMP_ADC_DELAY_AFTER_RAMP 500 // Delay in ticks before checking temp again after a ramp
+#define TEMP_ADC_DELAY_AFTER_RAMP 2000 // Delay in ticks before checking temp again after a ramp
 
-#define MOM_ENTER_DUR   128 // .16ms each.  Comment out to disable this feature
-#define MOM_EXIT_DUR    128 // .16ms each
+#define MOM_ENTER_DUR   128 // 16ms each.  Comment out to disable this feature
+#define MOM_EXIT_DUR    128 // 16ms each
 
 #define MOM_MODE_IDX    4   // The index of the mode to use in MODES above, starting at index of 0
 
@@ -229,11 +229,11 @@ inline void WDT_off()
 void ADC_on() {
 	ADMUX  = (1 << REFS0) | (1 << ADLAR) | adc_channel; // 1.1v reference, left-adjust, ADC1/PB2 or ADC2/PB3
     DIDR0 |= (1 << ADC_DIDR);							// disable digital input on ADC pin to reduce power consumption
-	ADCSRA = (1 << ADEN ) | (1 << ADSC ) | ADC_PRSCL;   // enable, start, prescale
+	ADCSRA = (1 << ADEN ) | (1 << ADSC ) | ADC_PRSCL;   // enable, start, prescale, Single Conversion mode
 }
 
 void ADC_off() {
-	ADCSRA &= ~(1<<7); //ADC off
+	ADCSRA &= ~(1 << ADSC); //ADC off
 }
 
 void sleep_until_switch_press()
@@ -344,39 +344,43 @@ ISR(WDT_vect) {
 			}
 		#endif
 			// Only do voltage monitoring when the switch isn't pressed
-			if (adc_channel == 0x01) {
-				if (batt_adc_ticks > 0) {
-					--batt_adc_ticks;
-				}
-				if (batt_adc_ticks == 0) {
-					// See if conversion is done
-					if (ADCSRA & (1 << ADIF)) {
+			// See if conversion is done. We moved this up here because we want to stay on
+			// the current ADC input until the conversion is done, and then switch to the new
+			// input, start the monitoring
+			if (batt_adc_ticks > 0) {
+				--batt_adc_ticks;
+			}
+			if (temp_adc_ticks > 0) {
+				--temp_adc_ticks;
+			}
+			if (ADCSRA & (1 << ADIF)) {
+				if (adc_channel == 0x01) {
+					
+					if (batt_adc_ticks == 0) {
 						// See if voltage is lower than what we were looking for
 						if (ADCH < ((mode_idx == 1) ? BATT_CRIT : BATT_LOW)) {
 							++lowbatt_cnt;
 						} else {
 							lowbatt_cnt = 0;
 						}
+					
+						// See if it's been low for a while
+						if (lowbatt_cnt >= 4) {
+							prev_mode();
+							highest_mode_idx = mode_idx;
+							lowbatt_cnt = 0;
+							// If we reach 0 here, main loop will go into sleep mode
+							// Restart the counter to when we step down again
+							batt_adc_ticks = BATT_ADC_DELAY;
+							temp_adc_ticks = TEMP_ADC_DELAY;
+						}
 					}
-				
-					// See if it's been low for a while
-					if (lowbatt_cnt >= 4) {
-						prev_mode();
-						highest_mode_idx = mode_idx;
-						lowbatt_cnt = 0;
-						// If we reach 0 here, main loop will go into sleep mode
-						// Restart the counter to when we step down again
-						batt_adc_ticks = BATT_ADC_DELAY;
-						temp_adc_ticks = TEMP_ADC_DELAY;
-					}
-				}					
-			} else if (adc_channel == 0x02) {
-				if (temp_adc_ticks > 0) {
-					--temp_adc_ticks;
-				}
-				if (temp_adc_ticks == 0) {
-					// See if conversion is done
-					if (ADCSRA & (1 << ADIF)) {
+					// Switch ADC to temp monitoring
+					adc_channel = 0x02;
+					ADMUX = ((ADMUX & 0b11111100) | adc_channel);
+				} else if (adc_channel == 0x02) {
+					
+					if (temp_adc_ticks == 0) {
 						// See if temp is higher than the high threshold
 						if (ADCH > ((mode_idx == 1) ? 255 : TEMP_HIGH)) {
 							++high_temp_cnt;
@@ -387,35 +391,34 @@ ISR(WDT_vect) {
 							high_temp_cnt = 0;
 							low_temp_cnt = 0;
 						}
-					}
 				
-					// See if it's been low for a while
-					if (high_temp_cnt >= 4) {
-						// TODO - step down half
-						prev_mode();
-						high_temp_cnt = 0;
-						low_temp_cnt = 0;
-						// If we reach 0 here, main loop will go into sleep mode
-						// Restart the counter to when we step down again
-						temp_adc_ticks = TEMP_ADC_DELAY_AFTER_RAMP;
-					} else if (low_temp_cnt >= 4) {
-						// TODO - step up half
-						next_mode();
-						high_temp_cnt = 0;
-						low_temp_cnt = 0;
-						// TODO - TEMP_ADC_DELAY_AFTER_RAMP?? Might jump up and cause it to overheat waiting too long
-						temp_adc_ticks = TEMP_ADC_DELAY;
+						// See if it's been low for a while
+						if (high_temp_cnt >= 4) {
+							// TODO - step down half
+							prev_mode();
+							high_temp_cnt = 0;
+							low_temp_cnt = 0;
+							// If we reach 0 here, main loop will go into sleep mode
+							// Restart the counter to when we step down again
+							temp_adc_ticks = TEMP_ADC_DELAY_AFTER_RAMP;
+						} else if (low_temp_cnt >= 4) {
+							// TODO - step up half
+							next_mode();
+							high_temp_cnt = 0;
+							low_temp_cnt = 0;
+							// TODO - TEMP_ADC_DELAY_AFTER_RAMP?? Might jump up and cause it to overheat waiting too long
+							temp_adc_ticks = TEMP_ADC_DELAY;
+						}
 					}
+					#ifdef VOLTAGE_MON
+					// Switch ADC to battery monitoring
+					adc_channel = 0x01;
+					ADMUX = ((ADMUX & 0b11111100) | adc_channel);
+					#endif;
 				}
 			}
-			#ifdef VOLTAGE_MON
-			// Switch monitoring to other ADC
-			adc_channel = ~adc_channel & 0x03;
-			ADC_on();
-			#else
-			// Make sure conversion is running for next time through
+			// Start conversion for next time through
 			ADCSRA |= (1 << ADSC);
-			#endif
 		}
 		press_duration = 0;
 	}
