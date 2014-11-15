@@ -5,6 +5,7 @@
  * 1.0 Initial version
  * 1.1 Cleaned up the code
  * 1.2 Added support for dual PWM outputs and selection of PWM mode per output level
+ * 1.3 Added ability to have turbo ramp down gradually instead of step down
  *
  */
 
@@ -65,18 +66,23 @@
 
 #define VOLTAGE_MON			// Comment out to disable
 
+#define TICKS_250MS			// If enabled, ticks are every 250 ms. If disabled, ticks are every 500 ms
+							// Affects mode saving and turbo timeout/rampdown timing
+
 #define MODE_MOON			3	// Can comment out to remove mode, but should be set through soldering stars
 #define MODE_LOW			14  // Can comment out to remove mode
 #define MODE_MED			39	// Can comment out to remove mode
-#define MODE_HIGH_W_TURBO	110	// MODE_HIGH value when turbo is enabled
-#define MODE_HIGH			255	// Can comment out to remove mode
+//#define MODE_HIGH			255	// Can comment out to remove mode
 #define MODE_TURBO			255	// Can comment out to remove mode
-#define TURBO_TIMEOUT		240 // How many WTD ticks before before dropping down (.5 sec each)
+#define MODE_TURBO_LOW		140	// Level turbo ramps down to if turbo enabled
+#define TURBO_TIMEOUT		240 // How many WTD ticks before before dropping down
+#define TURBO_RAMP_DOWN			// By default we will start to gradually ramp down, once TURBO_TIMEOUT ticks are reached, 1 PWM_LVL each tick until reaching MODE_TURBO_LOW PWM_LVL
+								// If commented out, we will step down to MODE_TURBO_LOW once TURBO_TIMEOUT ticks are reached
 
 #define FAST_PWM_START	    8 // Above what output level should we switch from phase correct to fast-PWM?
 #define DUAL_PWM_START		8 // Above what output level should we switch from the alternate PWM output to both PWM outputs?  Comment out to disable alternate PWM output
 
-#define WDT_TIMEOUT			2	// Number of WTD ticks before mode is saved (.5 sec each)
+#define WDT_TIMEOUT			4	// Number of WTD ticks before mode is saved
 
 #define ADC_LOW				130	// When do we start ramping
 #define ADC_CRIT			120 // When do we shut the light off
@@ -84,11 +90,6 @@
 /*
  * =========================================================================
  */
-
-#ifdef MODE_TURBO
-#undef  MODE_HIGH
-#define MODE_HIGH	MODE_HIGH_W_TURBO
-#endif
 
 //#include <avr/pgmspace.h>
 #include <avr/io.h>
@@ -158,11 +159,15 @@ inline void next_mode() {
 }
 
 inline void WDT_on() {
-	// Setup watchdog timer to only interrupt, not reset, every 500ms.
+	// Setup watchdog timer to only interrupt, not reset
 	cli();							// Disable interrupts
 	wdt_reset();					// Reset the WDT
 	WDTCR |= (1<<WDCE) | (1<<WDE);  // Start timed sequence
+	#ifdef TICKS_250MS
+	WDTCR = (1<<WDTIE) | (1<<WDP2); // Enable interrupt every 250ms
+	#else
 	WDTCR = (1<<WDTIE) | (1<<WDP2) | (1<<WDP0); // Enable interrupt every 500ms
+	#endif
 	sei();							// Enable interrupts
 }
 
@@ -234,13 +239,21 @@ ISR(WDT_vect) {
 			// Reset the mode to the start for next time
 			store_mode_idx((mode_dir == 1) ? 0 : (mode_cnt - 1));
 		}
-#ifdef MODE_TURBO	
-	//} else if (ticks == TURBO_TIMEOUT && modes[mode_idx] == MODE_TURBO) { // Doesn't make any sense why this doesn't work
-	} else if (ticks == TURBO_TIMEOUT && mode_idx == (mode_cnt - 1)) {
-		// Turbo mode is always at end
-		set_output(modes[--mode_idx]);
-#endif
 	}
+#ifdef MODE_TURBO	
+	//if (ticks == TURBO_TIMEOUT && modes[mode_idx] == MODE_TURBO) { // Doesn't make any sense why this doesn't work
+	if (ticks >= TURBO_TIMEOUT && mode_idx == (mode_cnt - 1) && PWM_LVL > MODE_TURBO_LOW) {
+		#ifdef TURBO_RAMP_DOWN
+		set_output(PWM_LVL - 1);
+		#else
+		// Turbo mode is always at end
+		set_output(MODE_TURBO_LOW);
+		//store_mode_idx(mode_idx);
+		#endif
+	}
+#endif
+
+
 
 }
 
