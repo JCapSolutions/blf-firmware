@@ -140,9 +140,9 @@ volatile uint8_t mode_idx = 0;
 volatile uint8_t press_duration = 0;
 volatile uint8_t in_momentary = 0;
 #ifdef VOLTAGE_MON
-volatile uint8_t adc_channel = 1;	// MUX 01 corresponds with PB2, 02 for PB3. Will switch back and forth
+volatile uint8_t adc_channel = 1;	// MUX 01 corresponds with PB2, 02 for PB4. Will switch back and forth
 #else
-volatile uint8_t adc_channel = 2;	// MUX 01 corresponds with PB2, 02 for PB3. Will switch back and forth
+volatile uint8_t adc_channel = 2;	// MUX 01 corresponds with PB2, 02 for PB4. Will switch back and forth
 #endif
 
 // Debounce switch press value
