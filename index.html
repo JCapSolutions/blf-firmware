@@ -52,7 +52,7 @@
 
 <p><strong>Features:</strong>
 Ability to solder stars to change modes:
-1. DUMMY STAR<br>
+<br>1. DUMMY STAR<br>
 2. Moon if connected and alternate PWM output not used<br>
 3. H to L if connected, L to H if not<br>
 4. Memory enabled if not connected<br></p>
@@ -73,7 +73,7 @@ Ability to solder stars to change modes:
 
 <p><strong>Features:</strong>
 Ability to solder stars to change modes:
-1. DUMMY STAR<br>
+<br>1. DUMMY STAR<br>
 2. Moon if connected and alternate PWM output not used<br>
 3. H to L if connected, L to H if not<br>
 4. Capacitor for off-time determination.  TODO - document what capacitors work best<br></p>
@@ -89,7 +89,7 @@ Ability to solder stars to change modes:
 
 <p><strong>Features:</strong>
 Ability to solder stars to change modes:
-1. DUMMY STAR<br>
+<br>1. DUMMY STAR<br>
 2. Not used<br>
 3. H to L if connected, L to H if not<br>
 4. Switch input<br></p>
@@ -106,10 +106,35 @@ Ability to solder stars to change modes:
 <li>Battery voltage detection with indicating flashes and output step down to previous mode when battery is getting low</li>
 </ul>
 
+<h2>
+<a id="star_dual_switch" class="anchor" href="#star_dual_switch" aria-hidden="true"><span class="octicon octicon-link"></span></a>STAR_dual_switch</h2>
+
+<p><strong>Used for:</strong>  NANJG driver in lights with a power switch (usually a rear clicky) and secondary momentary switch</p>
+
+<p><strong>Features:</strong>
+Ability to solder stars to change modes:
+<br>1. DUMMY STAR<br>
+2. H to L if connected, L to H if not<br>
+3. Memory if not connected<br>
+4. Switch input<br></p>
+
+<ul>
+<li>Master power switch (usually a rear clicky) will simply turn the light on and off - it won't change modes</li>
+<li>Short presses will move up through the modes, cycling around again</li>
+<li>Long presses will move backwards through the modes</li>
+<li>Define any number of modes you wish (within program space limitation)</li>
+<li>Ability to define mode order using Star 2</li>
+<li>18 kHz PWM ("fast")</li>
+<li>Option to have a turbo mode that will step down to a lower output at a specified timeout</li>
+<li>Battery voltage detection with indicating flashes and output step down to previous mode when battery is getting low</li>
+</ul>
+
+<p>This program has not been updated with the latest features (PWM mode selection, dual-PWM outputs, turbo ramp down) of the other programs, as I haven't even used this program in any of my lights yet.  If you want these features added and I can try and get it done.</p>
+
 <h3>
 <a id="questions" class="anchor" href="#questions" aria-hidden="true"><span class="octicon octicon-link"></span></a>Questions?</h3>
 
-<p>Visit this BudgetLightForum thread and post them up!  <a href="http://budgetlightforum.com/node/29150">http://budgetlightforum.com/node/29150</a></p>
+<p>Visit this BudgetLightForum thread and post them up, or message me (JonnyC)!  <a href="http://budgetlightforum.com/node/29150">http://budgetlightforum.com/node/29150</a></p>
       </section>
     </div>
 
