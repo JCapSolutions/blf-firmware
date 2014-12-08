@@ -35,13 +35,6 @@
 
 <p>Here's a link to the discussion about the firmware, with more detail about what it does provided by RMM - <a href="http://budgetlightforum.com/node/29150">http://budgetlightforum.com/node/29150</a></p>
 
-<pre><code>$ cd your_repo_root/repo_name
-$ git fetch origin
-$ git checkout gh-pages
-</code></pre>
-
-<p>If you're using the GitHub for Mac, simply sync your repository and you'll see the new branch.</p>
-
 <h3>
 <a id="how-to-download" class="anchor" href="#how-to-download" aria-hidden="true"><span class="octicon octicon-link"></span></a>How to download</h3>
 
@@ -59,10 +52,10 @@ $ git checkout gh-pages
 
 <p><strong>Features:</strong>
 Ability to solder stars to change modes:
-1. DUMMY STAR
-2. Moon if connected and alternate PWM output not used
-3. H to L if connected, L to H if not
-4. Memory enabled if not connected</p>
+1. DUMMY STAR<br>
+2. Moon if connected and alternate PWM output not used<br>
+3. H to L if connected, L to H if not<br>
+4. Memory enabled if not connected<br></p>
 
 <ul>
 <li>18 kHz PWM ("fast") or 9.4 kHz PWM ("phase-correct", usually used for custom FET driver versions)</li>
@@ -80,10 +73,10 @@ Ability to solder stars to change modes:
 
 <p><strong>Features:</strong>
 Ability to solder stars to change modes:
-1. DUMMY STAR
-2. Moon if connected and alternate PWM output not used
-3. H to L if connected, L to H if not
-4. Capacitor for off-time determination.  TODO - document what capacitors work best</p>
+1. DUMMY STAR<br>
+2. Moon if connected and alternate PWM output not used<br>
+3. H to L if connected, L to H if not<br>
+4. Capacitor for off-time determination.  TODO - document what capacitors work best<br></p>
 
 <ul>
 <li>This program has the same features as STAR, but with the next mode determination done by calculating how long the light has been off instead of how long it has been on.  IMO, this makes for a much more intuitive UI, as a single "blip" of a reverse clicky while the light is on will move you to the next mode, and a very short "blip" of turning the light on with a forward clicky will not cause the light to start up in the next mode a few seconds later.</li>
@@ -96,10 +89,10 @@ Ability to solder stars to change modes:
 
 <p><strong>Features:</strong>
 Ability to solder stars to change modes:
-1. DUMMY STAR
-2. Not used
-3. H to L if connected, L to H if not
-4. Switch input</p>
+1. DUMMY STAR<br>
+2. Not used<br>
+3. H to L if connected, L to H if not<br>
+4. Switch input<br></p>
 
 <ul>
 <li>Short presses will move up through the modes, cycling to "off" and then around again</li>
