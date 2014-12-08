@@ -3,6 +3,7 @@ blf-firmware
 
 Firmware for ATtiny13A based flashlight drivers
 
+Description found here http://jcapsolutions.github.io/blf-firmware
 
 License:
 
