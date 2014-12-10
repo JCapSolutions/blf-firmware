@@ -76,7 +76,7 @@ Ability to solder stars to change modes:
 <br>1. DUMMY STAR<br>
 2. Moon if connected and alternate PWM output not used<br>
 3. H to L if connected, L to H if not<br>
-4. Capacitor for off-time determination.  TODO - document what capacitors work best<br></p>
+4. Capacitor for off-time determination (I use Digikey.com part number 1276-1029-1-ND, which is a ceramic 1uF 0805 X7R)<br></p>
 
 <ul>
 <li>This program has the same features as STAR, but with the next mode determination done by calculating how long the light has been off instead of how long it has been on.  IMO, this makes for a much more intuitive UI, as a single "blip" of a reverse clicky while the light is on will move you to the next mode, and a very short "blip" of turning the light on with a forward clicky will not cause the light to start up in the next mode a few seconds later.</li>
