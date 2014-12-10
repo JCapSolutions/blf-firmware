@@ -66,7 +66,7 @@
 
 #define VOLTAGE_MON			// Comment out to disable
 
-#define TICKS_250MS			// If enabled, ticks are every 250 ms. If disabled, ticks are every 500 ms
+//#define TICKS_250MS		// If enabled, ticks are every 250 ms. If disabled, ticks are every 500 ms
 							// Affects mode saving and turbo timeout/rampdown timing
 
 #define MODE_MOON			3	// Can comment out to remove mode, but should be set through soldering stars
@@ -75,14 +75,15 @@
 //#define MODE_HIGH			255	// Can comment out to remove mode
 #define MODE_TURBO			255	// Can comment out to remove mode
 #define MODE_TURBO_LOW		140	// Level turbo ramps down to if turbo enabled
-#define TURBO_TIMEOUT		240 // How many WTD ticks before before dropping down
+#define TURBO_TIMEOUT		240 // How many WTD ticks before before dropping down.  If ticks set for 500 ms, then 240 x .5 = 120 seconds.  Max value of 255 unless you change "ticks"
+								// variable to uint8_t
 #define TURBO_RAMP_DOWN			// By default we will start to gradually ramp down, once TURBO_TIMEOUT ticks are reached, 1 PWM_LVL each tick until reaching MODE_TURBO_LOW PWM_LVL
 								// If commented out, we will step down to MODE_TURBO_LOW once TURBO_TIMEOUT ticks are reached
 
 #define FAST_PWM_START	    8 // Above what output level should we switch from phase correct to fast-PWM?
 #define DUAL_PWM_START		8 // Above what output level should we switch from the alternate PWM output to both PWM outputs?  Comment out to disable alternate PWM output
 
-#define WDT_TIMEOUT			4	// Number of WTD ticks before mode is saved
+#define WDT_TIMEOUT			2	// Number of WTD ticks before mode is saved
 
 #define ADC_LOW				130	// When do we start ramping
 #define ADC_CRIT			120 // When do we shut the light off
@@ -231,6 +232,9 @@ uint8_t low_voltage(uint8_t voltage_val) {
 ISR(WDT_vect) {
 	static uint8_t ticks = 0;
 	if (ticks < 255) ticks++;
+	// If you want more than 255 for longer turbo timeouts
+	//static uint16_t ticks = 0;
+	//if (ticks < 60000) ticks++;
 	
 	if (ticks == WDT_TIMEOUT) {
 		if (memory) {

@@ -64,11 +64,11 @@
  * Settings to modify per driver
  */
 
-//#define VOLTAGE_MON			// Comment out to disable
+#define VOLTAGE_MON			// Comment out to disable
 
 #define MEMORY				// Comment out to disable
 
-#define TICKS_250MS			// If enabled, ticks are every 250 ms. If disabled, ticks are every 500 ms
+//#define TICKS_250MS		// If enabled, ticks are every 250 ms. If disabled, ticks are every 500 ms
 							// Affects turbo timeout/rampdown timing
 
 // Levels should start around 10 with Fast PWM
@@ -79,7 +79,8 @@
 //#define MODE_HIGH			255	// Can comment out to remove mode
 #define MODE_TURBO			255	// Can comment out to remove mode
 #define MODE_TURBO_LOW		140	// Level turbo ramps down to if turbo enabled
-#define TURBO_TIMEOUT		240 // How many WTD ticks before before dropping down
+#define TURBO_TIMEOUT		240 // How many WTD ticks before before dropping down.  If ticks set for 500 ms, then 240 x .5 = 120 seconds.  Max value of 255 unless you change "ticks"
+								// variable to uint8_t
 #define TURBO_RAMP_DOWN			// By default we will start to gradually ramp down, once TURBO_TIMEOUT ticks are reached, 1 PWM_LVL each tick until reaching MODE_TURBO_LOW PWM_LVL
 								// If commented out, we will step down to MODE_TURBO_LOW once TURBO_TIMEOUT ticks are reached
 
@@ -273,6 +274,9 @@ uint8_t low_voltage(uint8_t voltage_val) {
 ISR(WDT_vect) {
 	static uint8_t ticks = 0;
 	if (ticks < 255) ticks++;
+	// If you want more than 255 for longer turbo timeouts
+	//static uint16_t ticks = 0;
+	//if (ticks < 60000) ticks++;
 	
 #ifdef MODE_TURBO	
 	//if (ticks == TURBO_TIMEOUT && modes[mode_idx] == MODE_TURBO) { // Doesn't make any sense why this doesn't work
