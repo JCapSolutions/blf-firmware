@@ -81,7 +81,7 @@
 								// If commented out, we will step down to MODE_TURBO_LOW once TURBO_TIMEOUT ticks are reached
 
 #define FAST_PWM_START	    8 // Above what output level should we switch from phase correct to fast-PWM?
-#define DUAL_PWM_START		8 // Above what output level should we switch from the alternate PWM output to both PWM outputs?  Comment out to disable alternate PWM output
+//#define DUAL_PWM_START		8 // Above what output level should we switch from the alternate PWM output to both PWM outputs?  Comment out to disable alternate PWM output
 
 #define WDT_TIMEOUT			2	// Number of WTD ticks before mode is saved
 

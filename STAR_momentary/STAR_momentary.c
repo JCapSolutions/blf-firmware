@@ -72,8 +72,8 @@
  */
 
 #define VOLTAGE_MON			// Comment out to disable - ramp down and eventual shutoff when battery is low
-#define MODES			0,0,32,125,255		// Must be low to high, and must start with 0
-#define ALT_MODES		0,2,32,125,255		// Must be low to high, and must start with 0, the defines the level for the secondary output. Comment out if no secondary output
+#define MODES			0,3,14,39,125,255		// Must be low to high, and must start with 0
+#define ALT_MODES		0,3,14,39,125,255		// Must be low to high, and must start with 0, the defines the level for the secondary output. Comment out if no secondary output
 #define MODE_PWM		0,PHASE,FAST,FAST,FAST		// Define one per mode above. 0 tells the light to go to sleep
 #define TURBO				// Comment out to disable - full output with a step down after n number of seconds
 							// If turbo is enabled, it will be where 255 is listed in the modes above
@@ -85,10 +85,10 @@
 #define ADC_CRIT		120 // When do we shut the light off
 #define ADC_DELAY		188	// Delay in ticks between low-bat rampdowns (188 ~= 3s)
 
-#define MOM_ENTER_DUR   128 // .16ms each.  Comment out to disable this feature
+//#define MOM_ENTER_DUR   128 // .16ms each.  Comment out to disable this feature
 #define MOM_EXIT_DUR    128 // .16ms each
 
-#define MOM_MODE_IDX    4   // The index of the mode to use in MODES above, starting at index of 0
+#define MOM_MODE_IDX    4   // The index of the mode to use in MODES above if momementary feature enabled, starting at index of 0
 
 /*
  * =========================================================================
