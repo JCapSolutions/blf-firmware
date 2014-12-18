@@ -3,6 +3,7 @@
  * Changelog
  *
  * 1.0 Initial version
+ * 1.1 Changed modes to static and no longer access through progmem. Also changed mode levels to more closely match STAR_momentary
  *
  */
 
@@ -62,7 +63,7 @@
  */
 
 #define VOLTAGE_MON			// Comment out to disable - ramp down and eventual shutoff when battery is low
-#define MODES			16,32,125,255	// Must be low to high, star determines which way we cycle through them
+#define MODES			8,14,39,125,255	// Must be low to high, star determines which way we cycle through them
 #define TURBO				// Comment out to disable - full output with a step down after n number of seconds
 							// If turbo is enabled, it will be where 255 is listed in the modes above
 #define TURBO_TIMEOUT	5625 // How many WTD ticks before before dropping down (.016 sec each)
@@ -77,7 +78,7 @@
  * =========================================================================
  */
 
-#include <avr/pgmspace.h>
+//#include <avr/pgmspace.h>
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
@@ -112,7 +113,7 @@
 /*
  * global variables
  */
-PROGMEM  uint8_t modes[] = { MODES };
+static   uint8_t modes[] = { MODES };
 volatile uint8_t mode_idx = 0;
 volatile uint8_t press_duration = 0;
 volatile uint8_t low_to_high = 0;
@@ -280,7 +281,7 @@ ISR(WDT_vect) {
 		} else {
 			// Only do turbo check when switch isn't pressed
 		#ifdef TURBO
-			if (pgm_read_byte(&modes[mode_idx]) == 255) {
+			if (modes[mode_idx] == 255) {
 				turbo_ticks++;
 				if (turbo_ticks > TURBO_TIMEOUT) {
 					// Go to the previous mode
@@ -376,7 +377,7 @@ int main(void)
 		}		
 	}
 	
-	PWM_LVL = pgm_read_byte(&modes[mode_idx]);
+	PWM_LVL = modes[mode_idx];
 	
 	uint8_t last_mode_idx = mode_idx;
 	
@@ -388,7 +389,7 @@ int main(void)
 			// Save the new mode
 			last_mode_idx = mode_idx;
 			// The WDT changed the mode.
-			PWM_LVL = pgm_read_byte(&modes[mode_idx]);
+			PWM_LVL = modes[mode_idx];
 		}
 	}
 
