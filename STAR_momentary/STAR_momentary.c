@@ -74,7 +74,7 @@
 #define VOLTAGE_MON			// Comment out to disable - ramp down and eventual shutoff when battery is low
 #define MODES			0,3,14,39,125,255		// Must be low to high, and must start with 0
 #define ALT_MODES		0,3,14,39,125,255		// Must be low to high, and must start with 0, the defines the level for the secondary output. Comment out if no secondary output
-#define MODE_PWM		0,PHASE,FAST,FAST,FAST		// Define one per mode above. 0 tells the light to go to sleep
+#define MODE_PWM		0,PHASE,FAST,FAST,FAST,FAST		// Define one per mode above. 0 tells the light to go to sleep
 #define TURBO				// Comment out to disable - full output with a step down after n number of seconds
 							// If turbo is enabled, it will be where 255 is listed in the modes above
 #define TURBO_TIMEOUT	5625 // How many WTD ticks before before dropping down (.016 sec each)
